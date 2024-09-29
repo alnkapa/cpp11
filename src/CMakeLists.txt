@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.25.1)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
-set(CMAKE_CXX_STANDARD 20)  # Установите стандарт C++20
-set(CMAKE_CXX_STANDARD_REQUIRED ON)  # Обязательно использовать указанный стандарт
-set(CMAKE_CXX_EXTENSIONS OFF)  # Отключите расширения компилятора (например, GNU)
+set(CMAKE_CXX_STANDARD 20)  
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)  
 
 project(Bayan VERSION 0.0.1)
 
