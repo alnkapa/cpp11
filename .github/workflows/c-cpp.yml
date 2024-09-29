@@ -12,10 +12,10 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
+      - run: sudo apt install libboost-all-dev
       - run: cmake ./src
       - run: cmake --build .
-      - run: cmake --build . --target=package
-      - run: sudo apt install libboost-all-dev
+      - run: cmake --build . --target=package      
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
