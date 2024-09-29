@@ -10,11 +10,23 @@ set(CMAKE_BUILD_TYPE Debug)
 
 project(Bayan VERSION 0.0.1)
 
-add_executable(sql_emul main.cpp)
+add_executable(join_server main.cpp)
 
 FIND_PACKAGE(Boost REQUIRED)
 
-TARGET_LINK_LIBRARIES( sql_emul ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(join_server ${Boost_LIBRARIES})
+
+# install(FILES async.h DESTINATION bin)
+install(TARGETS join_server DESTINATION bin)
+
+
+set(CPACK_GENERATOR "DEB")
+set(CPACK_PACKAGE_NAME "join_server")
+set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_PACKAGE_DESCRIPTION "join_server")
+set(CPACK_PACKAGE_CONTACT "my@my.my") 
+
+include(CPack)
 
 
 

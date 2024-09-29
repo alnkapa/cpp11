@@ -2,10 +2,12 @@
 #include <boost/asio.hpp>
 #include <boost/asio/write.hpp>
 #include <exception>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 class Connection
@@ -22,18 +24,34 @@ class Connection
     std::map<int, std::string> A{};
     std::map<int, std::string> B{};
 
+    size_t
+    get_max_length(const std::map<int, std::string> &collection)
+    {
+        size_t max_length = 0;
+        for (const auto &[key, value] : collection)
+        {
+            max_length = std::max(max_length, value.length());
+        }
+        return max_length;
+    }
+
     void
     print_intersection()
     {
         std::stringstream buffer{};
-        buffer << "id | A         | B\n";
-        buffer << "---+-----------+---------\n";
+        size_t max_length_A = get_max_length(A);
+        size_t max_length_B = get_max_length(B);
+
+        buffer << "id | A" << std::string(max_length_A, ' ') << "| B" << std::string(max_length_A, ' ') << "\n";
+        buffer << "---+-" << std::string(max_length_A + 1, '-') << "+-" << std::string(max_length_B + 1, '-') << "\n";
         for (const auto &[key, valueA] : A)
         {
             auto itB = B.find(key);
             if (itB != B.end())
             {
-                buffer << key << " | " << valueA << " | " << itB->second << "\n";
+                buffer << std::left << std::setw(2) << key << " | "
+                       << std::setw(max_length_A) << valueA << " | "
+                       << std::setw(max_length_B) << itB->second << "\n";
             }
         }
         boost::asio::write(m_socket, boost::asio::buffer(buffer.str()));
@@ -43,15 +61,21 @@ class Connection
     print_symmetric_difference()
     {
         std::stringstream buffer{};
-        buffer << "id | A         | B\n";
-        buffer << "---+-----------+---------\n";
+        size_t max_length_A = get_max_length(A);
+        size_t max_length_B = get_max_length(B);
+
+        buffer << "id | A" << std::string(max_length_A, ' ') << "| B" << std::string(max_length_A, ' ') << "\n";
+        buffer << "---+-" << std::string(max_length_A + 1, '-') << "+-" << std::string(max_length_B + 1, '-') << "\n";
 
         // Сначала выводим элементы из A, которых нет в B
         for (const auto &[key, valueA] : A)
         {
             if (B.find(key) == B.end())
             {
-                buffer << key << " | " << valueA << " | \n";
+                buffer << std::left << std::setw(2) << key << " | "
+                       << std::setw(max_length_A) << valueA << " | "
+                       << std::setw(max_length_B) << " "
+                       << "\n";
             }
         }
 
@@ -60,7 +84,10 @@ class Connection
         {
             if (A.find(key) == A.end())
             {
-                buffer << key << " |  | " << valueB << "\n";
+                buffer << std::left << std::setw(2) << key << " | "
+                       << std::setw(max_length_A) << " "
+                       << " | "
+                       << std::setw(max_length_B) << valueB << "\n";
             }
         }
         boost::asio::write(m_socket, boost::asio::buffer(buffer.str()));
@@ -69,14 +96,14 @@ class Connection
     void
     print_ok()
     {
-        boost::asio::write(m_socket, boost::asio::buffer("OK"));
+        boost::asio::write(m_socket, boost::asio::buffer("OK\n"));
     }
 
     void
     print_error(const std::exception &err)
     {
         std::string e = err.what();
-        boost::asio::write(m_socket, boost::asio::buffer(e));
+        boost::asio::write(m_socket, boost::asio::buffer(e + "\n"));
     }
 
     void
@@ -110,28 +137,42 @@ class Connection
                             }
                             else if (std::regex_search(line, match_insert, self->m_pattern_insert)) // insert
                             {
-                                int number = std::stoi(match_insert[1]);
-                                if (match_insert[0] == "A")
+                                int number = std::stoi(match_insert.str(2));
+                                if (match_insert.str(1) == "A")
                                 {
-                                    self->A.emplace(number, match_insert[2]);
+                                    self->A.emplace(number, match_insert.str(3));
+                                    self->print_ok();
                                 }
-                                else if (match_insert[0] == "B")
+                                else if (match_insert.str(1) == "B")
                                 {
-                                    self->B.emplace(number, match_insert[2]);
+                                    self->B.emplace(number, match_insert.str(3));
+                                    self->print_ok();
                                 }
-                                self->print_ok();
+                                else
+                                {
+                                    self->print_error(std::runtime_error("command :" + line + " is not support"));
+                                }
                             }
                             else if (std::regex_search(line, match_insert, self->m_pattern_truncate)) // truncate
                             {
-                                if (match_insert[0] == "A")
+                                if (match_insert.str(1) == "A")
                                 {
                                     self->A.clear();
+                                    self->print_ok();
                                 }
-                                else if (match_insert[0] == "B")
+                                else if (match_insert.str(1) == "B")
                                 {
                                     self->B.clear();
+                                    self->print_ok();
                                 }
-                                self->print_ok();
+                                else
+                                {
+                                    self->print_error(std::runtime_error("command :" + line + " is not support"));
+                                }
+                            }
+                            else
+                            {
+                                self->print_error(std::runtime_error("command :" + line + " is not support"));
                             }
                         }
                         catch (const std::exception &err)
@@ -152,8 +193,8 @@ class Connection
     Connection(boost::asio::ip::tcp::socket &&socket)
         : m_socket(std::move(socket))
     {
-        m_pattern_insert = std::regex(R"(INSERT ((A|B)) (\d+) (.*))", std::regex_constants::icase);
-        m_pattern_truncate = std::regex(R"(TRUNCATE ((A|B)))", std::regex_constants::icase);
+        m_pattern_insert = std::regex(R"(INSERT (A|B) (\d+) (.*))", std::regex_constants::icase);
+        m_pattern_truncate = std::regex(R"(TRUNCATE (A|B))", std::regex_constants::icase);
         m_pattern_intersection = std::regex(R"(INTERSECTION)", std::regex_constants::icase);
         m_pattern_symmetric_difference = std::regex(R"(SYMMETRIC_DIFFERENCE)", std::regex_constants::icase);
     };
@@ -204,22 +245,25 @@ class Server : public std::enable_shared_from_this<Server>
 int
 main(int argc, char *argv[])
 {
-    // if (argc != 2) {
-    //   std::cerr << "Usage: " << argv[0] << " [<host>:]<port>" << std::endl;
-    // }
-    std::string host{"localhost"};
-    std::string port{"5000"};
+    if (argc != 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <port>" << std::endl;
+        return 1;
+    }
+    std::string host{"0.0.0.0"};
+    std::string port{argv[1]};
     boost::asio::io_context io_context{};
     try
     {
-        boost::asio::ip::tcp::resolver resolver(io_context);
-        auto endpoint = resolver.resolve(host, port);
-        std::make_shared<Server>(io_context, *endpoint.begin())->start();
+        boost::asio::ip::tcp::endpoint endpoint{};
+        endpoint.address(boost::asio::ip::make_address(host));
+        endpoint.port(std::stoi(port));
+        std::make_shared<Server>(io_context, endpoint)->start();
         io_context.run();
     }
     catch (const std::exception &e)
     {
-        std::cerr << "error: " << e.what() << std::endl;
+        std::cerr << "error run: " << e.what() << std::endl;
     };
     return 0;
 }
