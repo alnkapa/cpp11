@@ -5,5 +5,4 @@ cd build
 rm -rf *
 cmake ../src
 cmake --build .
-
 cmake --build . --target package
