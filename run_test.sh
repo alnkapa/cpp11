@@ -1,0 +1,13 @@
+nc localhost 5000 <<EOF
+INSERT A 0 lean
+INSERT A 0 understand
+INSERT A 1 sweater
+INSERT A 2 frank
+INSERT B 6 flour
+INSERT B 7 wonder
+INSERT B 8 selection
+INTERSECTION
+SYMMETRIC_DIFFERENCE
+TRUNCATE A
+TRUNCATE B
+EOF
