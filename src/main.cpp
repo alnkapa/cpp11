@@ -153,7 +153,7 @@ class Connection
         : m_socket(std::move(socket))
     {
         m_pattern_insert = std::regex(R"(INSERT ((A|B)) (\d+) (.*))", std::regex_constants::icase);
-        m_pattern_truncate = std::regex(R"(TRUNCATE ((A|B))", std::regex_constants::icase);
+        m_pattern_truncate = std::regex(R"(TRUNCATE ((A|B)))", std::regex_constants::icase);
         m_pattern_intersection = std::regex(R"(INTERSECTION)", std::regex_constants::icase);
         m_pattern_symmetric_difference = std::regex(R"(SYMMETRIC_DIFFERENCE)", std::regex_constants::icase);
     };
